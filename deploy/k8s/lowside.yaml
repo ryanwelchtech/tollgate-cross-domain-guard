@@ -1,0 +1,61 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata: { name: guard, namespace: tollgate-low }
+spec:
+  replicas: 1   # single writer: the ledger is an append-only chain
+  selector: { matchLabels: { app: guard } }
+  template:
+    metadata: { labels: { app: guard } }
+    spec:
+      automountServiceAccountToken: false
+      securityContext: { runAsNonRoot: true, runAsUser: 10001, seccompProfile: { type: RuntimeDefault } }
+      containers:
+        - name: guard
+          image: registry.enclave.local/tollgate:1.0.0
+          args: ["services/lowside.ts"]
+          env:
+            - { name: TG_DIODE_HOST, value: diode-rx.tollgate-high.svc.cluster.local }
+            - { name: TG_DIODE_PORT, value: "9999" }
+          ports: [{ containerPort: 8080 }]
+          readinessProbe: { httpGet: { path: /healthz, port: 8080 }, periodSeconds: 5 }
+          livenessProbe: { httpGet: { path: /healthz, port: 8080 }, periodSeconds: 20 }
+          securityContext: { allowPrivilegeEscalation: false, readOnlyRootFilesystem: true, capabilities: { drop: ["ALL"] } }
+          resources: { requests: { cpu: 100m, memory: 128Mi }, limits: { cpu: "1", memory: 512Mi } }
+          volumeMounts:
+            - { name: keys, mountPath: /keys, readOnly: true }
+            - { name: data, mountPath: /data }
+      volumes:
+        - name: keys
+          secret: { secretName: tollgate-guard-keys }   # guard.key + trust/*.pub; source from Vault in production
+        - name: data
+          persistentVolumeClaim: { claimName: guard-data }
+---
+apiVersion: v1
+kind: Service
+metadata: { name: guard, namespace: tollgate-low }
+spec:
+  selector: { app: guard }
+  ports: [{ port: 8080, targetPort: 8080 }]
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata: { name: guard-egress, namespace: tollgate-low }
+spec:
+  podSelector: { matchLabels: { app: guard } }
+  policyTypes: [Egress]
+  egress:
+    - to:
+        - namespaceSelector: { matchLabels: { tollgate.io/side: high } }
+          podSelector: { matchLabels: { app: diode-rx } }
+      ports: [{ protocol: UDP, port: 9999 }]
+    - to:
+        - namespaceSelector: {}
+          podSelector: { matchLabels: { k8s-app: kube-dns } }
+      ports: [{ protocol: UDP, port: 53 }]
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata: { name: guard-data, namespace: tollgate-low }
+spec:
+  accessModes: [ReadWriteOnce]
+  resources: { requests: { storage: 10Gi } }

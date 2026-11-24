@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: tollgate-low
+  labels:
+    pod-security.kubernetes.io/enforce: restricted
+    tollgate.io/side: low
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: tollgate-high
+  labels:
+    pod-security.kubernetes.io/enforce: restricted
+    tollgate.io/side: high

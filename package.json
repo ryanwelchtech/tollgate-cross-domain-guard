@@ -1,0 +1,33 @@
+{
+  "name": "tollgate",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "TOLLGATE: cross-domain transfer guard for air-gapped enclaves",
+  "engines": {
+    "node": ">=23.6"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "test": "node --test 'test/*.test.ts'",
+    "lowside": "node services/lowside.ts",
+    "highside": "node services/highside.ts",
+    "demo": "node services/demo.ts",
+    "tg": "node services/tg.ts"
+  },
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.5",
+    "@types/react": "^18.3.31",
+    "@types/react-dom": "^18.3.7",
+    "@vitejs/plugin-react": "^4.7.0",
+    "puppeteer-core": "^25.18.1",
+    "typescript": "^5.9.3",
+    "vite": "^5.4.21"
+  }
+}

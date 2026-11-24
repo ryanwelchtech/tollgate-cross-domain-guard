@@ -1,0 +1,25 @@
+{
+  "name": "TOLLGATE low-to-high default policy",
+  "sourceNetwork": { "name": "NIPR-LAB (low side)", "maxLevel": "CUI" },
+  "destination": { "name": "MISSION-ENCLAVE (high side)", "maxLevel": "SECRET" },
+  "maxFileBytes": 26214400,
+  "maxPackageBytes": 104857600,
+  "maxFiles": 64,
+  "requireSignature": true,
+  "trustStore": {},
+  "allowedExtensions": [".txt", ".md", ".csv", ".log", ".json", ".cdx.json", ".xml", ".yaml", ".yml", ".svg", ".png", ".jpg", ".jpeg", ".pdf", ".zip", ".docx", ".xlsx"],
+  "markingRequiredExtensions": [".txt", ".md", ".csv"],
+  "markingLevels": ["UNCLASSIFIED", "CUI", "CONFIDENTIAL", "SECRET", "TOP SECRET"],
+  "dirtyWords": ["PROJECT KESTREL", "BLUE HARBOR", "NOFORN", "ORCON"],
+  "dirtyPatterns": ["\\bOP-[0-9]{4}-[A-Z]{2}\\b"],
+  "archive": { "maxRatio": 100, "maxEntries": 500, "allowNested": false },
+  "sbom": { "deniedLicenses": ["AGPL-3.0-only", "AGPL-3.0-or-later", "SSPL-1.0"] },
+  "approvals": {
+    "required": 2,
+    "reviewers": {
+      "rhr.alvarez": "Reliable Human Reviewer",
+      "rhr.chen": "Reliable Human Reviewer",
+      "issm.okafor": "ISSM"
+    }
+  }
+}

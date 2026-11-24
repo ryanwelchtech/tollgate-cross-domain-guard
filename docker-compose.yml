@@ -1,0 +1,47 @@
+# Lab topology. Three networks:
+#   lowside   - users/publishers reach the guard API
+#   diode     - the only link between sides; UDP 9999 toward the high side
+#   highside  - internal: true (no route out of the enclave)
+# The high-side container holds only the guard PUBLIC key and never sends.
+# Compose cannot make a link one-way; deploy/k8s enforces it with egress
+# NetworkPolicy, and production uses a hardware data diode.
+services:
+  lowside:
+    build: .
+    command: ["services/lowside.ts"]
+    environment:
+      TG_PORT: "8080"
+      TG_DIODE_HOST: highside
+      TG_DIODE_PORT: "9999"
+      TG_SIM_LOSS: "${TG_SIM_LOSS:-0}"
+    ports: ["127.0.0.1:8080:8080"]
+    volumes:
+      - ./keys:/keys:ro
+      - lowside-data:/data
+    networks: [lowside, diode]
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+
+  highside:
+    build: .
+    command: ["services/highside.ts"]
+    environment:
+      TG_DIODE_PORT: "9999"
+      TG_BIND: "0.0.0.0"
+    volumes:
+      - ./keys/guard.pub:/keys/guard.pub:ro
+      - highside-data:/data
+    networks: [diode, highside]
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+
+networks:
+  lowside: {}
+  diode: { internal: true }
+  highside: { internal: true }
+
+volumes:
+  lowside-data: {}
+  highside-data: {}

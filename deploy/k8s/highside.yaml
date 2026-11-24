@@ -1,0 +1,58 @@
+# Receive-only diode endpoint. The NetworkPolicy below is what makes the link
+# one-way in software: ingress only UDP/9999 from the low-side guard, and an
+# empty egress list (deny everything, DNS included).
+apiVersion: apps/v1
+kind: Deployment
+metadata: { name: diode-rx, namespace: tollgate-high }
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: diode-rx } }
+  template:
+    metadata: { labels: { app: diode-rx } }
+    spec:
+      automountServiceAccountToken: false
+      securityContext: { runAsNonRoot: true, runAsUser: 10001, seccompProfile: { type: RuntimeDefault } }
+      containers:
+        - name: rx
+          image: registry.enclave.local/tollgate:1.0.0
+          args: ["services/highside.ts"]
+          env:
+            - { name: TG_BIND, value: "0.0.0.0" }
+          ports: [{ containerPort: 9999, protocol: UDP }]
+          securityContext: { allowPrivilegeEscalation: false, readOnlyRootFilesystem: true, capabilities: { drop: ["ALL"] } }
+          resources: { requests: { cpu: 50m, memory: 64Mi }, limits: { cpu: 500m, memory: 256Mi } }
+          volumeMounts:
+            - { name: guard-pub, mountPath: /keys, readOnly: true }
+            - { name: data, mountPath: /data }
+      volumes:
+        - name: guard-pub
+          secret: { secretName: tollgate-guard-pub, items: [{ key: guard.pub, path: guard.pub }] }
+        - name: data
+          persistentVolumeClaim: { claimName: diode-rx-data }
+---
+apiVersion: v1
+kind: Service
+metadata: { name: diode-rx, namespace: tollgate-high }
+spec:
+  selector: { app: diode-rx }
+  ports: [{ port: 9999, protocol: UDP, targetPort: 9999 }]
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata: { name: diode-rx-one-way, namespace: tollgate-high }
+spec:
+  podSelector: { matchLabels: { app: diode-rx } }
+  policyTypes: [Ingress, Egress]
+  ingress:
+    - from:
+        - namespaceSelector: { matchLabels: { tollgate.io/side: low } }
+          podSelector: { matchLabels: { app: guard } }
+      ports: [{ protocol: UDP, port: 9999 }]
+  egress: []
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata: { name: diode-rx-data, namespace: tollgate-high }
+spec:
+  accessModes: [ReadWriteOnce]
+  resources: { requests: { storage: 10Gi } }
