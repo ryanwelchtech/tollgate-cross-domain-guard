@@ -19,7 +19,7 @@ mission-owned environments — reduced to a single, runnable, auditable artifact
 
 ![TOLLGATE demo](docs/demo.gif)
 
-**Live demo:** https://tollgate-guard.vercel.app · the browser console runs the
+**Live demo:** https://tollgate-rho.vercel.app · the browser console runs the
 *exact same TypeScript inspection engine* as the Node services, entirely client-side.
 
 ---
